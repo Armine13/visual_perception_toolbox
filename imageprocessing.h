@@ -1,20 +1,21 @@
 #ifndef IMAGEPROCESSING_H
 #define IMAGEPROCESSING_H
 
+#include "filters.h"
+
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 
 
-class ImageProcessing
+class ImageProcessing: public Filters
 {
 public:
-    ImageProcessing(const cv::Mat &image);
+    ImageProcessing();
     ~ImageProcessing();
 
-    cv::Mat filterMean(int kern = 3);
+    cv::Mat filterMean(const cv::Mat &image, int kern = 3);
 
 private:
-    cv::Mat img;
 };
 
 #endif // IMAGEPROCESSING_H

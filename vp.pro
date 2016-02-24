@@ -15,19 +15,29 @@ TEMPLATE = app
 SOURCES += main.cpp\
     thirdParty/cvMatToQImage.cpp \
     GUI/mainwindow.cpp \
-    imageprocessing.cpp
+    imageprocessing.cpp \
+    filters.cpp
 
 
 HEADERS  += GUI/mainwindow.h \
-    imageprocessing.h
+    imageprocessing.h \
+    filters.h
 
 
 FORMS    += GUI/mainwindow.ui \
 
 
-#OpenCV
-CONFIG += link_pkgconfig
-PKGCONFIG += opencv
+#Linux
+#CONFIG += link_pkgconfig
+#PKGCONFIG += opencv
 
-RESOURCES += \
-    GUI/tangomfk.qrc
+#RESOURCES += \
+#    GUI/tangomfk.qrc
+
+#Windows
+#INCLUDEPATH += C:\opencv-mingw\eigen-eigen-c58038c56923
+
+INCLUDEPATH += C:\opencv-mingw\install\include
+LIBS += -L"C:/opencv-mingw/install/x64/mingw/bin"
+LIBS += -lopencv_core2410 -lopencv_highgui2410 -lopencv_imgproc2410
+

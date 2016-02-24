@@ -34,7 +34,7 @@
      <x>0</x>
      <y>0</y>
      <width>619</width>
-     <height>25</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -58,6 +58,7 @@
      </property>
      <addaction name="actionMean"/>
      <addaction name="actionMedian"/>
+     <addaction name="actionGaussian"/>
     </widget>
     <widget class="QMenu" name="menuAdd_Noise">
      <property name="title">
@@ -65,10 +66,10 @@
      </property>
      <addaction name="actionSalt_Pepper"/>
      <addaction name="actionUniform"/>
-     <addaction name="actionGaussian"/>
     </widget>
     <addaction name="menuFilters"/>
     <addaction name="menuAdd_Noise"/>
+    <addaction name="actionSet_Kernel_Size"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -184,17 +185,25 @@
     <string>Uniform..</string>
    </property>
   </action>
-  <action name="actionGaussian">
-   <property name="text">
-    <string>Gaussian..</string>
-   </property>
-  </action>
   <action name="actionHistory">
    <property name="text">
     <string>History..</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionSet_Kernel_Size">
+   <property name="text">
+    <string>Set Kernel Size..</string>
+   </property>
+  </action>
+  <action name="actionGaussian">
+   <property name="text">
+    <string>Gaussian..</string>
+   </property>
+   <property name="toolTip">
+    <string>Gaussian Filter</string>
    </property>
   </action>
  </widget>
