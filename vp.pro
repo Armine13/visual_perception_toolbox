@@ -16,12 +16,16 @@ SOURCES += main.cpp\
     thirdParty/cvMatToQImage.cpp \
     GUI/mainwindow.cpp \
     imageprocessing.cpp \
-    filters.cpp
+    filters.cpp \
+    GUI/window.cpp \
+    GUI/player.cpp
 
 
 HEADERS  += GUI/mainwindow.h \
     imageprocessing.h \
-    filters.h
+    filters.h \
+    GUI/window.h \
+    GUI/player.h
 
 
 FORMS    += GUI/mainwindow.ui \

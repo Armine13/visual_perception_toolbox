@@ -13,21 +13,7 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
-  <widget class="QWidget" name="centralWidget">
-   <widget class="QLabel" name="imageLabel">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>30</y>
-      <width>130</width>
-      <height>130</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Image</string>
-    </property>
-   </widget>
-  </widget>
+  <widget class="QWidget" name="centralWidget"/>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
@@ -43,6 +29,8 @@
     </property>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
+    <addaction name="actionOpen_Video"/>
+    <addaction name="actionOpen_Camera"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
@@ -52,24 +40,18 @@
     <property name="title">
      <string>Image</string>
     </property>
-    <widget class="QMenu" name="menuFilters">
+    <widget class="QMenu" name="menuTransform">
      <property name="title">
-      <string>Filters</string>
+      <string>Transform</string>
      </property>
-     <addaction name="actionMean"/>
-     <addaction name="actionMedian"/>
-     <addaction name="actionGaussian"/>
+     <addaction name="actionFlip_Horizontally"/>
+     <addaction name="actionFlip_Vertically"/>
+     <addaction name="actionRotate_Clockwise"/>
+     <addaction name="actionRotate_Anti_Clockwise"/>
     </widget>
-    <widget class="QMenu" name="menuAdd_Noise">
-     <property name="title">
-      <string>Add Noise</string>
-     </property>
-     <addaction name="actionSalt_Pepper"/>
-     <addaction name="actionUniform"/>
-    </widget>
-    <addaction name="menuFilters"/>
-    <addaction name="menuAdd_Noise"/>
-    <addaction name="actionSet_Kernel_Size"/>
+    <addaction name="menuTransform"/>
+    <addaction name="actionScale_Image"/>
+    <addaction name="actionAdd_Logo"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -85,31 +67,84 @@
     <addaction name="actionRedo"/>
     <addaction name="actionHistory"/>
    </widget>
+   <widget class="QMenu" name="menuColors">
+    <property name="title">
+     <string>Colors</string>
+    </property>
+    <addaction name="actionHistogram_Equalization"/>
+    <addaction name="actionInvert"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <widget class="QMenu" name="menuFeature_extraction">
+     <property name="title">
+      <string>Feature extraction</string>
+     </property>
+     <addaction name="actionSIFT"/>
+     <addaction name="actionSURF"/>
+     <addaction name="actionFAST"/>
+     <addaction name="actionHarris"/>
+    </widget>
+    <addaction name="menuFeature_extraction"/>
+    <addaction name="actionHough_transformation"/>
+   </widget>
+   <widget class="QMenu" name="menuFilters_2">
+    <property name="title">
+     <string>Filters</string>
+    </property>
+    <widget class="QMenu" name="menuBlur">
+     <property name="title">
+      <string>Blur</string>
+     </property>
+     <addaction name="actionMean"/>
+     <addaction name="actionMedian"/>
+     <addaction name="actionGaussian"/>
+     <addaction name="actionSet_Kernel_Size"/>
+    </widget>
+    <widget class="QMenu" name="menuEdge_Detection_2">
+     <property name="title">
+      <string>Edge Detection</string>
+     </property>
+     <addaction name="actionCanny"/>
+     <addaction name="actionSobel"/>
+     <addaction name="actionLaplacian"/>
+    </widget>
+    <widget class="QMenu" name="menuNoise">
+     <property name="title">
+      <string>Noise</string>
+     </property>
+     <addaction name="actionSalt_and_Pepper"/>
+     <addaction name="actionUniform"/>
+    </widget>
+    <widget class="QMenu" name="menuMorphology_2">
+     <property name="title">
+      <string>Morphology</string>
+     </property>
+     <addaction name="actionDilation"/>
+     <addaction name="actionErosion"/>
+     <addaction name="actionOpening"/>
+     <addaction name="actionClosing"/>
+     <addaction name="actionConvolution_Mask"/>
+    </widget>
+    <addaction name="menuBlur"/>
+    <addaction name="menuEdge_Detection_2"/>
+    <addaction name="menuNoise"/>
+    <addaction name="menuMorphology_2"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuImage"/>
+   <addaction name="menuColors"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuFilters_2"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QToolBar" name="mainToolBar">
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-  </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionNew">
-   <property name="text">
-    <string>New</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+N</string>
-   </property>
-  </action>
   <action name="actionOpen">
    <property name="text">
-    <string>Open</string>
+    <string>Open Image..</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -165,6 +200,79 @@
     <string>About</string>
    </property>
   </action>
+  <action name="actionHistory">
+   <property name="text">
+    <string>History..</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionFlip_Horizontally">
+   <property name="text">
+    <string>Flip Horizontally</string>
+   </property>
+  </action>
+  <action name="actionFlip_Vertically">
+   <property name="text">
+    <string>Flip Vertically</string>
+   </property>
+  </action>
+  <action name="actionRotate_Clockwise">
+   <property name="text">
+    <string>Rotate Clockwise</string>
+   </property>
+  </action>
+  <action name="actionRotate_Anti_Clockwise">
+   <property name="text">
+    <string>Rotate Anti-Clockwise</string>
+   </property>
+  </action>
+  <action name="actionHistogram_Equalization">
+   <property name="text">
+    <string>Histogram Equalization</string>
+   </property>
+  </action>
+  <action name="actionSIFT">
+   <property name="text">
+    <string>SIFT</string>
+   </property>
+  </action>
+  <action name="actionSURF">
+   <property name="text">
+    <string>SURF</string>
+   </property>
+  </action>
+  <action name="actionFAST">
+   <property name="text">
+    <string>FAST</string>
+   </property>
+  </action>
+  <action name="actionHarris">
+   <property name="text">
+    <string>Harris</string>
+   </property>
+  </action>
+  <action name="actionHough_transformation">
+   <property name="text">
+    <string>Hough transformation</string>
+   </property>
+  </action>
+  <action name="actionInvert">
+   <property name="text">
+    <string>Invert</string>
+   </property>
+  </action>
+  <action name="actionOpen_Camera">
+   <property name="text">
+    <string>Open Camera</string>
+   </property>
+  </action>
+  <action name="actionScale_Image">
+   <property name="text">
+    <string>Scale Image..</string>
+   </property>
+  </action>
   <action name="actionMean">
    <property name="text">
     <string>Mean</string>
@@ -175,7 +283,27 @@
     <string>Median</string>
    </property>
   </action>
-  <action name="actionSalt_Pepper">
+  <action name="actionGaussian">
+   <property name="text">
+    <string>Gaussian..</string>
+   </property>
+  </action>
+  <action name="actionCanny">
+   <property name="text">
+    <string>Canny</string>
+   </property>
+  </action>
+  <action name="actionSobel">
+   <property name="text">
+    <string>Sobel</string>
+   </property>
+  </action>
+  <action name="actionLaplacian">
+   <property name="text">
+    <string>Laplacian</string>
+   </property>
+  </action>
+  <action name="actionSalt_and_Pepper">
    <property name="text">
     <string>Salt and Pepper..</string>
    </property>
@@ -185,12 +313,29 @@
     <string>Uniform..</string>
    </property>
   </action>
-  <action name="actionHistory">
+  <action name="actionDilation">
    <property name="text">
-    <string>History..</string>
+    <string>Dilation</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+H</string>
+  </action>
+  <action name="actionErosion">
+   <property name="text">
+    <string>Erosion</string>
+   </property>
+  </action>
+  <action name="actionOpening">
+   <property name="text">
+    <string>Opening</string>
+   </property>
+  </action>
+  <action name="actionClosing">
+   <property name="text">
+    <string>Closing</string>
+   </property>
+  </action>
+  <action name="actionConvolution_Mask">
+   <property name="text">
+    <string>Convolution Mask..</string>
    </property>
   </action>
   <action name="actionSet_Kernel_Size">
@@ -198,12 +343,22 @@
     <string>Set Kernel Size..</string>
    </property>
   </action>
-  <action name="actionGaussian">
+  <action name="actionAdd_Logo">
    <property name="text">
-    <string>Gaussian..</string>
+    <string>Insert Logo..</string>
    </property>
-   <property name="toolTip">
-    <string>Gaussian Filter</string>
+  </action>
+  <action name="actionNew">
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOpen_Video">
+   <property name="text">
+    <string>Open Video..</string>
    </property>
   </action>
  </widget>

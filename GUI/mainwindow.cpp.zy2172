@@ -25,43 +25,41 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     //Initializing local variables
-    kernel_size = 3; // Default kernel side size
     windowList = QVector<Window*>();
-    activeWindow = NULL;
-    vPlayer = new Player();
+
+    kernel_size = 3; // Default kernel side size
+    activeWindow = -1;
+    anyWindowOpen = false;
 }
 
 MainWindow::~MainWindow()
 {
-    delete vPlayer;
     delete ui;
-//    for(int i = 0; i < windowList.length(); i++)
-//        if (windowList[i] != NULL)
-//        {
-//            windowList[i]->~Window();
-//            windowList[i] = NULL;
-//        }
-    qDebug()<<"mainwindow descructor";
-
+    qDebug()<<windowList.length();
+    for(int i = 0; i < windowList.length(); i++)
+        windowList[i]->~Window();
 }
 void MainWindow::on_actionClose_triggered()
 {
-    if (activeWindow != NULL)
-    {
-        activeWindow->~Window();
-        activeWindow = NULL;
-    }
+    if (activeWindow < windowList.length() && activeWindow > -1)
+        windowList[activeWindow]->~Window();
+    activeWindow--;
 }
-void MainWindow::on_actionExit_triggered()
+
+void MainWindow::on_actionNew_triggered()
 {
 
+}
+
+void MainWindow::on_actionExit_triggered()
+{
+    qDebug()<<"quitting";
     QCoreApplication::quit();
 }
 void MainWindow::closeEvent( QCloseEvent *event )
 {
     on_actionExit_triggered();
 }
-
 void MainWindow::on_actionOpen_triggered()
 {
     QString fileName = QFileDialog::getOpenFileName(this,
@@ -71,40 +69,17 @@ void MainWindow::on_actionOpen_triggered()
         return;
 
     // Load the image through opencv
-    activeWindow = new Window(fileName);
-    windowList.append(activeWindow);
+    Mat img = cv::imread(fileName.toStdString());
+    assert(!img.empty());
 
-    activeWindow->setWindowTitle(fileName);
+    windowList.append(new Window(img));
+
+    activeWindow++;
+    anyWindowOpen = true;
+    qDebug()<<"number of windows "<<windowList.length();
     //    this->setMinimumSize(wdg->size());
-    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
-    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
-    connect(vPlayer, SIGNAL(processedImage(QImage)),this, SLOT(updatePlayerUI(QImage)));
 }
-void MainWindow::on_actionOpen_Video_triggered()
-{
-    QString filename = QFileDialog::getOpenFileName(this,
-                                             tr("Open Video"), ".",
-                                             tr("Video Files (*.avi *.mpg *.mp4)"));
 
-       if (!filename.isEmpty()){
-           if (!vPlayer->loadVideo(filename.toLatin1().data()))
-           {
-
-               QMessageBox msgBox;
-               msgBox.setText("The selected video could not be opened!");
-               msgBox.exec();
-           }
-
-           activeWindow = new Window();
-           windowList.append(activeWindow);
-           vPlayer->Play();
-           connect(vPlayer, SIGNAL(processedImage(QImage)),this, SLOT(updatePlayerUI(QImage)));
-
-           setAttribute(Qt::WA_DeleteOnClose, true);
-       }
-//       QObject::connect(myPlayer, SIGNAL(processedImage(QImage)),
-//                                     this, SLOT(updatePlayerUI(QImage)));
-}
 void MainWindow::on_actionSet_Kernel_Size_triggered()
 {
     bool ok;
@@ -116,29 +91,28 @@ void MainWindow::on_actionSet_Kernel_Size_triggered()
 
 void MainWindow::on_actionMean_triggered()
 {//Mean filter
-    if (activeWindow == NULL) return;
+    if (!anyWindowOpen) return;
     qDebug()<<"mean filter";
     cv::Mat img;
-
-    blur(activeWindow->getImageMat(), img, cv::Size( kernel_size, kernel_size), cv::Point(-1,-1) );
-    activeWindow->setImage(img);
+    blur(windowList[activeWindow]->getImageMat(), img, cv::Size( kernel_size, kernel_size), cv::Point(-1,-1) );
+    windowList[activeWindow]->setImage(img);
 }
 
 void MainWindow::on_actionMedian_triggered()
 {//Median filter
-    if (activeWindow == NULL) return;
+    if (!anyWindowOpen) return;
     Mat img;
     //kernel size has to be odd for median filter
     if (kernel_size % 2 == 0)
-        medianBlur(activeWindow->getImageMat(), img, kernel_size + 1);
+        medianBlur(windowList[activeWindow]->getImageMat(), img, kernel_size + 1);
     else
-        medianBlur(activeWindow->getImageMat(), img, kernel_size);
-    activeWindow->setImage(img);
+        medianBlur(windowList[activeWindow]->getImageMat(), img, kernel_size);
+    windowList[activeWindow]->setImage(img);
 }
 
 void MainWindow::on_actionGaussian_triggered()
 {
-    if (activeWindow == NULL) return;
+    if (!anyWindowOpen) return;
     QDialog dialog(this);
     dialog.setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
 
@@ -213,87 +187,24 @@ void MainWindow::on_actionGaussian_triggered()
     Mat img;
     if (dialog.exec() == QDialog::Accepted)
     {
-        GaussianBlur(activeWindow->getImageMat(), img, cv::Size(kernelX->value(), kernelY->value()),sigmaX->value(), sigmaY->value());
-        activeWindow->setImage(img);
+        GaussianBlur(windowList[activeWindow]->getImageMat(), img, cv::Size(kernelX->value(), kernelY->value()),sigmaX->value(), sigmaY->value());
+        windowList[activeWindow]->setImage(img);
     }
 }
 
 void MainWindow::on_actionSalt_and_Pepper_triggered()
 {
-    if (activeWindow == NULL) return;
+    if (!anyWindowOpen) return;
 }
 
 void MainWindow::on_actionSave_triggered()
 {
-    if (activeWindow == NULL) return;
+    if (!anyWindowOpen) return;
 
-    if (activeWindow->getFileName().isEmpty())
-        on_actionSave_As_triggered();
-    else
-        activeWindow->save();
 }
 
 void MainWindow::on_actionSave_As_triggered()
 {
-    if (activeWindow == NULL) return;
-    QFileDialog* dlg = new QFileDialog;
-    dlg->setModal(true);
-    dlg->setWindowFlags(Qt::WindowStaysOnTopHint);
+    if (!anyWindowOpen) return;
 
-    QString fileName = dlg->getSaveFileName(this, tr("Save As"),activeWindow->getFileName(),
-                                            tr("Images (*.png *.xpm *.jpg)"));
-
-    if (fileName.isEmpty()) {
-        return;
-    } else {
-        activeWindow->save(fileName);
-    }
-}
-
-void MainWindow::on_actionNew_triggered()
-{
-    activeWindow = new Window();
-    windowList.append(activeWindow);
-    activeWindow->setWindowTitle("NewFile");
-
-    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
-    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
-}
-void MainWindow::on_focusChanged()
-{
-      Window* w = qobject_cast<Window*>(sender());
-      if( w != NULL )
-      {
-          activeWindow = w;
-      }
-}
-void MainWindow::updatePlayerUI(QImage img)
-{
-//    if (activeWindow == NULL) return;
-//    qDebug()<<"mean filter";
-//    cv::Mat img;
-
-//    blur(activeWindow->getImageMat(), img, cv::Size( kernel_size, kernel_size), cv::Point(-1,-1) );
-//    activeWindow->setImage(img);
-
-    if (activeWindow != NULL)
-    {
-//        ui->label->setAlignment(Qt::AlignCenter);
-//        ui->label->setPixmap(QPixmap::fromImage(img).scaled(ui->label->size(),
-//                                           Qt::KeepAspectRatio, Qt::FastTransformation));
-        activeWindow->setImage(img);
-    }
-}
-
-void MainWindow::on_stopVideo()
-{
-//    if (vPlayer->isStopped())
-//    {
-//        vPlayer->Play();
-//        ui->pushButton_2->setText(tr("Stop"));
-//    }else
-//    {
-//        vPlayer->Stop();
-//        ui->pushButton_2->setText(tr("Play"));
-//    }
 }
