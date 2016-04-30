@@ -1,0 +1,829 @@
+#include "mainwindow.h"
+
+
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    QIcon::setThemeName("Tango");//custom theme for icons
+
+    // Add icons to buttons
+    //File
+    ui->actionNew->setIcon(QIcon::fromTheme("document-new"));
+    ui->actionOpen->setIcon(QIcon::fromTheme("image-x-generic"));
+    ui->actionSave_As->setIcon(QIcon::fromTheme("document-save-as"));
+    ui->actionSave->setIcon(QIcon::fromTheme("document-save"));
+    ui->actionClose->setIcon(QIcon::fromTheme("document-close"));
+    ui->actionExit->setIcon(QIcon::fromTheme("exit"));
+    //Edit
+    ui->actionUndo->setIcon(QIcon::fromTheme("edit-undo"));
+    ui->actionRedo->setIcon(QIcon::fromTheme("edit-redo"));
+    ui->actionHistory->setIcon(QIcon::fromTheme("appointment-new"));
+    //Help
+    ui->actionAbout->setIcon(QIcon::fromTheme("help-browser"));
+
+
+    //Initializing local variables
+    windowList = QVector<Window*>();
+    activeWindow = NULL;
+
+    on_actionOpen_triggered();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+    for(int i = 0; i < windowList.length(); i++)
+        if (windowList[i] != NULL)
+        {
+            windowList[i]->~Window();
+            windowList[i] = NULL;
+        }
+}
+void MainWindow::on_actionClose_triggered()
+{
+    if (activeWindow != NULL)
+    {
+        activeWindow->~Window();
+        activeWindow = NULL;
+    }
+}
+void MainWindow::on_actionExit_triggered()
+{
+    QCoreApplication::quit();
+}
+void MainWindow::closeEvent( QCloseEvent *event )
+{
+    on_actionExit_triggered();
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+    //    QString fileName = QFileDialog::getOpenFileName(this,
+    //                                                    tr("Open Image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
+
+    QString fileName = QString("C:/Users/Mins/Documents/C++/vp/build-vp-kit1-Debug/George06.jpg");
+
+
+
+    //exit function if no image selected
+    if (fileName.isEmpty())
+        return;
+
+    // Load the image through opencv
+    activeWindow = new Window(fileName, this);
+    windowList.append(activeWindow);
+
+    activeWindow->setWindowTitle(fileName);
+    //    this->setMinimumSize(wdg->size());
+    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
+    //    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
+
+}
+
+void MainWindow::on_actionMean_triggered()
+{//Mean filter
+    if (activeWindow == NULL) return;
+
+    bool ok;
+    int num = QInputDialog::getInt(this, tr("QInputDialog::getInteger()"),
+                                   tr("New Kernel Size:"), 3, 1, 1000, 1, &ok, Qt::WindowStaysOnTopHint);
+
+    if (ok && (num > 0))
+    {
+        int  kernel_size = num;
+        Blur blur_(kernel_size);
+
+//        if (typeid(*activeWindow) == typeid(VideoWindow))
+
+            activeWindow->applyFilter(blur_);
+    }
+}
+
+void MainWindow::on_actionMedian_triggered()
+{//Median filter
+
+    if (activeWindow == NULL) return;
+    Mat img;
+
+    bool ok;
+    int num = QInputDialog::getInt(this, tr("QInputDialog::getInteger()"),
+                                   tr("New Kernel Size:"), 3, 3, 1000, 1, &ok, Qt::WindowStaysOnTopHint);
+    if (ok && (num > 0))
+    {
+        int  kernel_size = num;
+
+        qDebug()<<kernel_size;
+
+        if (kernel_size % 2 == 0)
+        {
+            MedianBlur medianBlur_(kernel_size + 1);
+            activeWindow->applyFilter(medianBlur_);
+        }
+        else
+        {
+            MedianBlur medianBlur_(kernel_size);
+            activeWindow->applyFilter(medianBlur_);
+        }
+    }
+}
+
+void MainWindow::on_actionGaussian_triggered()
+{
+    if (activeWindow == NULL) return;
+    QDialog dialog(this);
+    dialog.setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
+
+    dialog.setWindowTitle(tr("Gaussian Filter"));
+
+    QGridLayout* groupLayout = new QGridLayout(&dialog);
+
+    //Kernel size input group
+    QGroupBox* kernel_size_group = new QGroupBox(tr("Kernel Size"));
+    QLabel *kernelX_label = new QLabel(tr("Width: "));
+    QSpinBox *kernelX = new QSpinBox;
+    kernelX->setRange(0, 100);
+    kernelX->setSingleStep(2);
+    kernelX->setValue(3);
+    kernelX->findChild<QLineEdit*>()->setReadOnly(true);
+
+    QLabel *kernelY_label = new QLabel(tr("Height: "));
+    QSpinBox *kernelY = new QSpinBox;
+    kernelY->setRange(0, 100);
+    kernelY->setSingleStep(2);
+    kernelY->setValue(3);
+    kernelY->findChild<QLineEdit*>()->setReadOnly(true);
+
+    QHBoxLayout* kernel_layout = new QHBoxLayout;
+    kernel_layout->addWidget(kernelX_label);
+    kernel_layout->addWidget(kernelX);
+    kernel_layout->addWidget(kernelY_label);
+    kernel_layout->addWidget(kernelY);
+
+    kernel_size_group->setLayout(kernel_layout);
+
+    //Sigmas input group
+    QGroupBox* sigma_group = new QGroupBox(tr("Standard Deviation"));
+
+    QLabel *sigmaX_label = new QLabel(tr("SigmaX: "));
+    QSpinBox *sigmaX = new QSpinBox;
+    sigmaX->setRange(0, 100);
+    sigmaX->setSingleStep(1);
+    sigmaX->setValue(1);
+
+    QLabel *sigmaY_label = new QLabel(tr("SigmaY: "));
+    QSpinBox *sigmaY = new QSpinBox;
+    sigmaY->setRange(0, 100);
+    sigmaY->setSingleStep(1);
+    sigmaY->setValue(1);
+
+    QHBoxLayout* sigma_layout = new QHBoxLayout;
+    sigma_layout->addWidget(sigmaX_label);
+    sigma_layout->addWidget(sigmaX);
+    sigma_layout->addWidget(sigmaY_label);
+    sigma_layout->addWidget(sigmaY);
+
+    sigma_group->setLayout(sigma_layout);
+
+    QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                       Qt::Horizontal, &dialog);
+
+    groupLayout->addWidget(buttonBox, 3, 0,1,2);
+    groupLayout->addWidget(kernel_size_group, 0, 0);
+    groupLayout->addWidget(sigma_group, 1, 0);
+
+    groupLayout->setRowMinimumHeight(2, 160);
+    groupLayout->setColumnMinimumWidth(1, 160);
+
+    groupLayout->setAlignment(buttonBox, Qt::AlignCenter);
+    groupLayout->setVerticalSpacing(20);
+
+    connect(buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    connect(buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    //    kernel_size_group->adjustSize();
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        GaussianBlurFunctor gaussianBlurFunctor_(cv::Size(kernelX->value(), kernelY->value()),sigmaX->value(), sigmaY->value());
+        activeWindow->applyFilter(gaussianBlurFunctor_);
+    }
+}
+
+void MainWindow::on_actionSalt_and_Pepper_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+
+    QFormLayout form(&dialog);
+
+
+    form.addRow(new QLabel("Salt And Pepper Noise"));
+
+    SliderWidget* slider = new SliderWidget(1, 100, 50, QString("Quantity"),true, &dialog);
+    form.addRow(slider);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    if (dialog.exec() == QDialog::Accepted) {
+        int p = slider->getValue();
+        Mat input_image = activeWindow->getImageMat();
+
+        Mat saltpepper_noise = Mat::zeros(input_image.rows, input_image.cols,CV_8U);
+        randu(saltpepper_noise,0,255);
+
+        Mat black = saltpepper_noise < 255*p/200;
+        Mat white = saltpepper_noise > 255-225*p/200;
+
+        Mat saltpepper_img = input_image.clone();
+        saltpepper_img.setTo(255,white);
+        saltpepper_img.setTo(0,black);
+
+        activeWindow->setImage(saltpepper_img);
+    }
+}
+
+void MainWindow::on_actionSave_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    if (activeWindow->getFileName().isEmpty())
+        on_actionSave_As_triggered();
+    else
+        activeWindow->save();
+}
+
+void MainWindow::on_actionSave_As_triggered()
+{
+    if (activeWindow == NULL) return;
+    QFileDialog* dlg = new QFileDialog;
+    dlg->setModal(true);
+    dlg->setWindowFlags(Qt::WindowStaysOnTopHint);
+
+    QString fileName = dlg->getSaveFileName(this, tr("Save As"),activeWindow->getFileName(),
+                                            tr("Images (*.png *.xpm *.jpg)"));
+
+    if (fileName.isEmpty()) {
+        return;
+    } else {
+        activeWindow->save(fileName);
+    }
+}
+
+void MainWindow::on_actionNew_triggered()
+{
+    activeWindow = new Window(this);
+    windowList.append(activeWindow);
+    activeWindow->setWindowTitle("NewFile");
+
+    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
+    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
+}
+void MainWindow::on_focusChanged()
+{
+    Window* w = qobject_cast<Window*>(sender());
+    if( w != NULL )
+    {
+        activeWindow = w;
+    }
+}
+
+void MainWindow::on_actionOpen_Camera_triggered()
+{
+    //exit function if no image selected
+    //    if (fileName.isEmpty())
+    //        return;
+
+    // Load the image through opencv
+    activeWindow = new VideoWindow(this);
+    windowList.append(activeWindow);
+
+    activeWindow->setWindowTitle(QString("Camera"));
+    //    this->setMinimumSize(wdg->size());
+    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
+    //    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
+}
+
+void MainWindow::on_actionFlip_Horizontally_triggered()
+{
+    if (activeWindow == NULL) return;
+    Mat img;
+
+    //    blur(activeWindow->getImageMat(), img, cv::Size( kernel_size, kernel_size), cv::Point(-1,-1) );
+
+    flip(activeWindow->getImageMat(), img, 1);
+    activeWindow->setImage(img);
+}
+
+void MainWindow::on_actionFlip_Vertically_triggered()
+{
+    if (activeWindow == NULL) return;
+    Mat img;
+
+    //    blur(activeWindow->getImageMat(), img, cv::Size( kernel_size, kernel_size), cv::Point(-1,-1) );
+
+    flip(activeWindow->getImageMat(), img, 0);
+    activeWindow->setImage(img);
+}
+
+void MainWindow::on_actionRotate_Clockwise_triggered()
+{
+    if (activeWindow == NULL) return;
+    qDebug()<<"rotate cw";
+    cv::Mat img;
+
+    transpose(activeWindow->getImageMat(), img);
+    flip(img, img,1);
+
+    activeWindow->setImage(img);
+}
+
+void MainWindow::on_actionRotate_Anti_Clockwise_triggered()
+{
+    if (activeWindow == NULL) return;
+    qDebug()<<"rotate acw";
+    cv::Mat img;
+
+    transpose(activeWindow->getImageMat(), img);
+    flip(img, img,0);
+
+    activeWindow->setImage(img);
+
+}
+
+void MainWindow::on_actionHistogram_Equalization_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    Mat inputImage = activeWindow->getImageMat();
+    Mat img;
+
+    if(inputImage.channels() >= 3)
+    {
+        Mat ycrcb;
+
+        cvtColor(inputImage,ycrcb,CV_BGR2YCrCb);
+
+        vector<Mat> channels;
+        split(ycrcb,channels);
+
+        equalizeHist(channels[0], channels[0]);
+
+
+        merge(channels,ycrcb);
+
+        cvtColor(ycrcb,img,CV_YCrCb2BGR);
+    }
+    else
+        equalizeHist( inputImage, img);
+
+    activeWindow->setImage(img);
+}
+
+void MainWindow::on_actionInvert_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    Mat inputImage = activeWindow->getImageMat();
+
+    Mat img =  cv::Scalar::all(255) - inputImage;
+
+    activeWindow->setImage(img);
+}
+
+void MainWindow::on_actionCanny_triggered()
+{//http://docs.opencv.org/2.4/doc/tutorials/imgproc/imgtrans/canny_detector/canny_detector.html
+
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+    QFormLayout form(&dialog);
+    form.addRow(new QLabel("Canny Edge Detection Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(1, 100, 80, QString("Threshold "),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 10, 3,QString("Ratio "),false, &dialog);
+    form.addRow(slider2);
+
+    SliderWidget* slider3 = new SliderWidget(2, 50, 3,QString("Kernel Size "),false, &dialog);
+    form.addRow(slider3);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int ts = slider1->getValue();
+        int ratio = slider2->getValue();
+        int kernel_size = slider2->getValue();
+
+    CannyFunctor canny_(ts, ratio, kernel_size);
+    activeWindow->applyFilter(canny_);
+    }
+}
+
+void MainWindow::on_actionSobel_triggered()
+{//http://docs.opencv.org/2.4/doc/tutorials/imgproc/imgtrans/sobel_derivatives/sobel_derivatives.html
+
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+    QFormLayout form(&dialog);
+    form.addRow(new QLabel("Sobel Edge Detection Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(1, 100, 1, QString("Scale "),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 100, 0, QString("Delta "),true, &dialog);
+    form.addRow(slider2);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int scale = slider1->getValue();
+        int delta = slider2->getValue();
+    SobelFunctor sobel_(scale, delta);
+    activeWindow->applyFilter(sobel_);
+    }
+}
+
+void MainWindow::on_actionLaplacian_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    Mat src = activeWindow->getImageMat();
+
+    LaplacianFunctor laplacian_;
+    activeWindow->applyFilter(laplacian_);
+}
+
+void MainWindow::on_actionDilation_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+
+    QFormLayout form(&dialog);
+
+
+    form.addRow(new QLabel("Dilation Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(0, 2, 0,QString("Structure Element: 0-Rect, 1-Cross, 2-Elliplse"),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 20, 1,QString("Kernel Size: 2n+1"),false, &dialog);
+    form.addRow(slider2);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int dilation_elem = slider1->getValue();
+        int dilation_size = slider2->getValue();
+        int dilation_type;
+        if( dilation_elem == 0 ){ dilation_type = MORPH_RECT; }
+        else if( dilation_elem == 1 ){ dilation_type = MORPH_CROSS; }
+        else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
+
+        Mat element = getStructuringElement( dilation_type,
+                                             Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                             Point( dilation_size, dilation_size ) );
+        // Apply the dilation operation
+        DilateFunctor dilate_(element);
+        activeWindow->applyFilter(dilate_);
+    }
+}
+
+
+void MainWindow::on_actionErosion_triggered()
+{//http://docs.opencv.org/2.4/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+
+    QFormLayout form(&dialog);
+
+
+    form.addRow(new QLabel("Erosion Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(0, 2, 0,QString("Structure Element: 0-Rect, 1-Cross, 2-Elliplse"),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 20, 1,QString("Kernel Size: 2n+1"),false, &dialog);
+    form.addRow(slider2);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int erosion_elem = slider1->getValue();
+        int erosion_size = slider2->getValue();
+        int erosion_type;
+        if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }
+        else if( erosion_elem == 1 ){ erosion_type = MORPH_CROSS; }
+        else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+
+        Mat element = getStructuringElement( erosion_type,
+                                             Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                             Point( erosion_size, erosion_size ) );
+        // Apply the erosion operation
+        ErodeFunctor erode_(element);
+        activeWindow->applyFilter(erode_);
+    }
+}
+
+void MainWindow::on_actionOpening_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+
+    QFormLayout form(&dialog);
+
+
+    form.addRow(new QLabel("Opening Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(0, 2, 0,QString("Structure Element: 0-Rect, 1-Cross, 2-Elliplse"),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 20, 1,QString("Kernel Size: 2n+1"),false, &dialog);
+    form.addRow(slider2);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int elem = slider1->getValue();
+        int elem_size = slider2->getValue();
+        int elem_type;
+        if( elem == 0 ){ elem_type = MORPH_RECT; }
+        else if( elem == 1 ){ elem_type = MORPH_CROSS; }
+        else if( elem == 2) { elem_type = MORPH_ELLIPSE; }
+
+        Mat element = getStructuringElement( elem_type,
+                                             Size( 2*elem_size + 1, 2*elem_size+1 ),
+                                             Point( elem_size, elem_size ) );
+
+        OpeningFunctor opening_(element);
+        activeWindow->applyFilter(opening_);
+    }
+}
+
+void MainWindow::on_actionClosing_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    QDialog dialog(this);
+
+    QFormLayout form(&dialog);
+
+
+    form.addRow(new QLabel("Closing Settings"));
+
+    SliderWidget* slider1 = new SliderWidget(0, 2, 0,QString("Structure Element: 0-Rect, 1-Cross, 2-Elliplse"),false, &dialog);
+    form.addRow(slider1);
+
+    SliderWidget* slider2 = new SliderWidget(1, 20, 1,QString("Kernel Size: 2n+1"),false, &dialog);
+    form.addRow(slider2);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    if (dialog.exec() == QDialog::Accepted) {
+        int elem = slider1->getValue();
+        int elem_size = slider2->getValue();
+        int elem_type;
+        if( elem == 0 ){ elem_type = MORPH_RECT; }
+        else if( elem == 1 ){ elem_type = MORPH_CROSS; }
+        else if( elem == 2) { elem_type = MORPH_ELLIPSE; }
+
+        Mat element = getStructuringElement( elem_type,
+                                             Size( 2*elem_size + 1, 2*elem_size+1 ),
+                                             Point( elem_size, elem_size ) );
+
+        ClosingFunctor closing_(element);
+        activeWindow->applyFilter(closing_);
+    }
+}
+
+void MainWindow::on_actionUniform_triggered()
+{
+    if (activeWindow == NULL) return;
+
+}
+
+void MainWindow::on_actionCamera_Calibration_triggered()
+{
+    QString pwd("");
+    char * PWD;
+    PWD = getenv ("PWD");
+    pwd.append(PWD);
+    qDebug() << pwd;
+
+    char *s = "default.xml";
+    camera_calib(0, &s);
+}
+
+void MainWindow::on_actionConvolution_Mask_triggered()
+{
+
+}
+
+void MainWindow::on_actionHistogram_triggered()
+{//http://docs.opencv.org/2.4/doc/tutorials/imgproc/histograms/histogram_calculation/histogram_calculation.html
+
+    if (activeWindow == NULL) return;
+
+    // Load image
+    Mat src = activeWindow->getImageMat();
+
+    if( !src.data )
+      { return; }
+
+    /// Separate the image in 3 places ( B, G and R )
+    vector<Mat> bgr_planes;
+    split( src, bgr_planes );
+
+    /// Establish the number of bins
+    int histSize = 256;
+
+    /// Set the ranges ( for B,G,R) )
+    float range[] = { 0, 256 } ;
+    const float* histRange = { range };
+
+    bool uniform = true; bool accumulate = false;
+
+    Mat b_hist, g_hist, r_hist;
+
+    // Compute the histograms:
+    calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate );
+    calcHist( &bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate );
+    calcHist( &bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate );
+
+    // Draw the histograms for B, G and R
+    int hist_w = 512; int hist_h = 400;
+    int bin_w = cvRound( (double) hist_w/histSize );
+
+    Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
+
+    /// Normalize the result to [ 0, histImage.rows ]
+    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+    normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+    normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+
+    /// Draw for each channel
+    for( int i = 1; i < histSize; i++ )
+    {
+        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(b_hist.at<float>(i-1)) ) ,
+                         Point( bin_w*(i), hist_h - cvRound(b_hist.at<float>(i)) ),
+                         Scalar( 255, 0, 0), 2, 8, 0  );
+        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(g_hist.at<float>(i-1)) ) ,
+                         Point( bin_w*(i), hist_h - cvRound(g_hist.at<float>(i)) ),
+                         Scalar( 0, 255, 0), 2, 8, 0  );
+        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(r_hist.at<float>(i-1)) ) ,
+                         Point( bin_w*(i), hist_h - cvRound(r_hist.at<float>(i)) ),
+                         Scalar( 0, 0, 255), 2, 8, 0  );
+    }
+
+    /// Display
+    namedWindow("Histogram", CV_WINDOW_AUTOSIZE );
+    imshow("Histogram", histImage );
+    waitKey(2);
+    return;
+}
+
+void MainWindow::on_actionSIFT_triggered()
+{//http://stackoverflow.com/questions/5461148/sift-implementation-with-opencv-2-2
+    if (activeWindow == NULL) return;
+
+    Mat img = activeWindow->getImageMat();
+    if (img.channels() == 3)
+        cvtColor( img, img, CV_BGR2GRAY );
+
+        SIFT sift;
+        vector<KeyPoint> key_points;
+
+        Mat descriptors;
+        sift(img, Mat(), key_points, descriptors);
+
+        Mat output_img;
+        drawKeypoints(img, key_points, output_img);
+
+        namedWindow("SIFT Features");
+        imshow("SIFT Features", output_img);
+        waitKey(3);
+        imwrite("sift_features.png", descriptors);
+}
+
+void MainWindow::on_actionSURF_triggered()
+{
+    if (activeWindow == NULL) return;
+
+    Mat img = activeWindow->getImageMat();
+    if (img.channels() == 3)
+        cvtColor( img, img, CV_BGR2GRAY );
+
+        SURF surf;
+        vector<KeyPoint> key_points;
+
+        Mat descriptors;
+        surf(img, Mat(), key_points, descriptors);
+
+        Mat output_img;
+        drawKeypoints(img, key_points, output_img);
+
+        namedWindow("SURF Features");
+        imshow("SURF Features", output_img);
+        waitKey(3);
+        imwrite("surf_features.png", descriptors);
+}
+
+void MainWindow::on_actionHarris_triggered()
+{
+    if (activeWindow == NULL) return;
+
+      Mat src = activeWindow->getImageMat();
+    Mat src_gray;
+    int thresh = 150;
+
+    char* corners_window = "Harris Corner Detector";
+
+
+    if (src.channels() == 3)
+        cvtColor( src, src_gray, CV_BGR2GRAY );
+
+    Mat dst, dst_norm, dst_norm_scaled;
+     dst = Mat::zeros( src.size(), CV_32FC1 );
+
+     // Detector parameters
+     int blockSize = 2;
+     int apertureSize = 3;
+     double k = 0.04;
+
+     // Detecting corners
+     cornerHarris( src_gray, dst, blockSize, apertureSize, k, BORDER_DEFAULT );
+
+     // Normalizing
+     normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
+     convertScaleAbs( dst_norm, dst_norm_scaled );
+
+     // Drawing a circle around corners
+     for( int j = 0; j < dst_norm.rows ; j++ )
+        { for( int i = 0; i < dst_norm.cols; i++ )
+             {
+               if( (int) dst_norm.at<float>(j,i) > thresh )
+                 {
+                  circle( dst_norm_scaled, Point( i, j ), 5,  Scalar(0), 2, 8, 0 );
+
+                 }
+             }
+        }
+     namedWindow( corners_window, CV_WINDOW_AUTOSIZE );
+     imshow( corners_window, dst_norm_scaled );
+
+    waitKey(2);
+    imwrite("harris_features.png", dst_norm);
+}
+
+void MainWindow::on_actionOpen_Video_triggered()
+{
+    qDebug()<<"video";
+        QString fileName = QFileDialog::getOpenFileName(this,
+                                                        tr("Open Video"), "", tr("Video Files (*.avi *.mp4)"));
+
+//    QString fileName = QString("C:/Users/Mins/Documents/C++/vp/build-vp-kit1-Debug/George06.jpg");
+
+
+
+    //exit function if no image selected
+    if (fileName.isEmpty())
+        return;
+
+    // Load the image through opencv
+    activeWindow = new VideoWindow(fileName, this);
+    windowList.append(activeWindow);
+
+    activeWindow->setWindowTitle(fileName);
+    //    this->setMinimumSize(wdg->size());
+    connect(activeWindow, SIGNAL(windowActivated()), this, SLOT(on_focusChanged()));
+    //    connect(activeWindow, SIGNAL(windowClosed()), this, SLOT(on_actionClose_triggered()));
+
+}

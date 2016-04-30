@@ -1,8 +1,8 @@
 #include "window.h"
 
-Window::Window(QString file) :
-    QWidget()
-{i = 0;
+Window::Window(QString file, QMainWindow* parent) :
+    QMainWindow(parent)
+{
     filename = file;
 
     imageMat = cv::imread(filename.toStdString());
@@ -13,12 +13,14 @@ Window::Window(QString file) :
 
     //Display image in label
     imageLabel = new QLabel(this);
-    setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
+
+    setWindowFlags(this->windowFlags() |Qt::Window);
+    setMinimumSize(imageQ.size());
     updateLabel();
     show();
 }
-Window::Window() :
-    QWidget()
+Window::Window(QMainWindow *parent) :
+    QMainWindow(parent)
 {
     filename = "";
 
@@ -30,14 +32,17 @@ Window::Window() :
 
     //Display image in label
     imageLabel = new QLabel(this);
-    setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
+
+    setWindowFlags(this->windowFlags() |Qt::Window);
+    setMinimumSize(imageQ.size());
     updateLabel();
     show();
 }
-Window::Window(cv::Mat im) :
-    QWidget()
+Window::Window(cv::Mat im, QMainWindow *parent) :
+    QMainWindow(parent)
 {
     filename = "";
+
 
     imageMat = im;
     imageQ = cvMatToQImage(im);
@@ -46,14 +51,18 @@ Window::Window(cv::Mat im) :
 
     //Display image in label
     imageLabel = new QLabel(this);
-    setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
+
+    setWindowFlags(this->windowFlags() |Qt::Window);
+
+    setMinimumSize(imageQ.size());
     updateLabel();
     show();
 }
-Window::Window(QImage im) :
-    QWidget()
+Window::Window(QImage im, QMainWindow *parent) :
+    QMainWindow(parent)
 {
     filename = "";
+
 
     imageQ = im;
     imageMat = cv::Mat(im.height(), im.width(), CV_8UC4, im.bits(), im.bytesPerLine());//QImage to cv::Mat
@@ -62,43 +71,47 @@ Window::Window(QImage im) :
 
     //Display image in label
     imageLabel = new QLabel(this);
-    setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
+
+    setWindowFlags(this->windowFlags() |Qt::Window);
+    setMinimumSize(imageQ.size());
     updateLabel();
     show();
 }
-void Window::setImage(QImage im)
-{
-    imageQ = im;
-    imageMat = cv::Mat(im.height(), im.width(), CV_8UC4, im.bits(), im.bytesPerLine());//QImage to cv::Mat
-    updateLabel();
-//    show();
-}
+
 void Window::setImage(Mat im)
 {
-    imageMat = im;//cv::mat
-    imageQ = cvMatToQImage(im);//Convert mat to QImage
+    if (filterFunc != NULL)
+    {
+        filterFunc(im, imageMat);
+
+    }
+    else
+        imageMat = im;//cv::mat
+
+//    cvtColor(imageMat, imageMat, CV_BGR2RGB);
+    imageQ = cvMatToQImage(imageMat);//Convert mat to QImage
+    setMinimumSize(imageQ.size());
+
     updateLabel();
-//    show();
 }
+
 void Window::updateLabel()
 {
     imageLabel->setPixmap(QPixmap::fromImage(imageQ));
 
     // Adjust sizes of label to contained image
     imageLabel->setMinimumSize(imageQ.size());
-    setMinimumSize(imageQ.size());
+    this->adjustSize();
 }
 
 Window::~Window()
 {
-    qDebug()<<"window descructor ";
-    this->deleteLater();
 }
-cv::Mat Window::getImageMat() const
+const Mat Window::getImageMat() const
 {
     return imageMat;
 }
-QImage Window::getImage() const
+const QImage Window::getImage() const
 {
     return imageQ;
 }
@@ -125,4 +138,8 @@ bool Window::event(QEvent *e)
         emit windowClosed();
 
     return QWidget::event(e);
+}
+void Window::removeFilter()
+{
+    filterFunc = NULL;
 }
